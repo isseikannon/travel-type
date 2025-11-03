@@ -1,1 +1,734 @@
-テストです。
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>旅行タイプ診断 | あなたにぴったりの都道府県</title>
+  <style>
+    :root {
+      --accent: #3f51b5;
+      --accent-light: #e8eaf6;
+      --bg: #f7f8fc;
+      --text: #333;
+      --muted: #666;
+      font-family: 'Segoe UI', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 1.8rem 1.2rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 2.4vw, 2.4rem);
+    }
+
+    header p {
+      margin: 0.5rem auto 0;
+      max-width: 720px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    main {
+      max-width: 960px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    .view {
+      display: none;
+      background: #fff;
+      border-radius: 18px;
+      padding: clamp(1.5rem, 3vw, 2.5rem);
+      box-shadow: 0 18px 40px rgba(63, 81, 181, 0.12);
+    }
+
+    .view.active {
+      display: block;
+    }
+
+    .intro-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 999px;
+      padding: 0.8rem 1.8rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 10px 25px rgba(63, 81, 181, 0.24);
+    }
+
+    button.secondary {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+      box-shadow: none;
+    }
+
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 32px rgba(63, 81, 181, 0.18);
+    }
+
+    .question-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.6rem;
+    }
+
+    .question-title {
+      font-size: clamp(1.4rem, 3vw, 1.8rem);
+      margin: 0;
+    }
+
+    .question-subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .progress {
+      height: 12px;
+      background: #edf0ff;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #536dfe, #3f51b5);
+      width: 0;
+      transition: width 0.4s ease;
+    }
+
+    .question-options {
+      display: grid;
+      gap: 0.9rem;
+    }
+
+    .option-card {
+      border: 1px solid #dfe3ff;
+      border-radius: 16px;
+      padding: 1rem 1.2rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .option-card input {
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .option-card input:checked::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .option-card label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .option-card strong {
+      font-size: 1.05rem;
+    }
+
+    .option-card span {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .option-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 12px 28px rgba(63, 81, 181, 0.14);
+    }
+
+    .question-footer {
+      margin-top: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .step-indicator {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .result-summary {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .result-summary h2 {
+      margin: 0.2rem 0 0.6rem;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+    }
+
+    .result-summary p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .result-list {
+      display: grid;
+      gap: 1.2rem;
+    }
+
+    .result-card {
+      border: 1px solid #e0e3ff;
+      border-radius: 16px;
+      padding: 1.3rem 1.4rem 1.6rem;
+      background: #fbfcff;
+    }
+
+    .result-card header {
+      background: none;
+      color: inherit;
+      padding: 0;
+      text-align: left;
+      margin-bottom: 0.9rem;
+    }
+
+    .result-card h3 {
+      margin: 0 0 0.3rem;
+      font-size: 1.25rem;
+    }
+
+    .match-score {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .match-score span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .match-bar {
+      height: 10px;
+      background: #dee3ff;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 0.8rem;
+    }
+
+    .match-bar-inner {
+      height: 100%;
+      background: linear-gradient(90deg, #7c4dff, #536dfe);
+    }
+
+    .match-detail {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.8rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .restart {
+      text-align: center;
+      margin-top: 2.8rem;
+    }
+
+    .legend {
+      background: #f1f3ff;
+      border-radius: 12px;
+      padding: 1rem 1.2rem;
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding: 0 1rem 3rem;
+      }
+
+      .question-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.6rem;
+      }
+
+      .question-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+      }
+
+      .question-footer button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>旅行タイプ診断</h1>
+    <p>9つの質問に答えるだけで、あなたの嗜好にぴったり寄り添う都道府県をおすすめします。都会的なにぎわいから海のアクティビティまで、気になる観点をぎゅっと凝縮しました。</p>
+  </header>
+
+  <main>
+    <section id="intro-view" class="view active">
+      <h2>旅のイメージを思い描いてみましょう</h2>
+      <p>質問はすべて5段階評価で簡単に答えられます。「こんな旅行をしてみたい」という理想像に近いものを直感で選んでください。最後に、ぴったり度の高い都道府県ベスト3とおすすめポイントをご案内します。</p>
+      <div class="intro-actions">
+        <button id="startButton" class="primary">診断をはじめる</button>
+        <button id="showLegendButton" class="secondary">評価項目を見る</button>
+      </div>
+      <div class="legend" id="legend" hidden>
+        <strong>診断で重視する9つの観点</strong>
+        <ul>
+          <li>都会度：にぎわいや利便性の度合い</li>
+          <li>平均気温：年間を通した気候のイメージ</li>
+          <li>文化充実度：歴史・伝統・芸術に触れられるか</li>
+          <li>宿泊充実度：ホテルや旅館の数・質</li>
+          <li>アクティブ度：アクティビティや体験の豊富さ</li>
+          <li>漁業活動度：海・漁港・海産物の魅力度</li>
+          <li>小売充実度：ショッピングや買い物環境</li>
+          <li>宿泊人気度：話題性やSNSでの人気度</li>
+          <li>日帰り観光度：日帰り旅行のしやすさ</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="question-view" class="view">
+      <div class="question-header">
+        <div>
+          <p class="question-subtitle" id="questionSubtitle"></p>
+          <h2 class="question-title" id="questionTitle"></h2>
+        </div>
+        <div class="step-indicator" id="stepIndicator"></div>
+      </div>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="question-options" id="questionOptions"></div>
+      <div class="question-footer">
+        <button id="backButton" class="secondary">戻る</button>
+        <button id="nextButton" class="primary" disabled>次へ進む</button>
+      </div>
+    </section>
+
+    <section id="result-view" class="view">
+      <div class="result-summary">
+        <p>診断結果</p>
+        <h2 id="resultTitle">おすすめの旅先を算出しています…</h2>
+        <p id="resultDescription">回答データをもとに、あなたの理想に近い都道府県を分析しました。</p>
+      </div>
+      <div class="result-list" id="resultList"></div>
+      <div class="restart">
+        <button id="restartButton" class="secondary">もう一度診断する</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const questions = [
+      {
+        id: 'urbanity',
+        title: '都会度（Urbanity）',
+        subtitle: '旅行先の「都市らしさ（にぎわい・利便性）」をどの程度重視しますか？',
+        options: [
+          { value: 1, label: '静かな田舎や自然の多い場所を好む' },
+          { value: 2, label: 'やや落ち着いた地域が良い' },
+          { value: 3, label: 'どちらともいえない' },
+          { value: 4, label: '便利でにぎやかな場所を選びたい' },
+          { value: 5, label: '大都市・中心街のようなエリアを好む' }
+        ]
+      },
+      {
+        id: 'climate',
+        title: '平均気温（Climate Preference）',
+        subtitle: '旅行先の「気候（暖かさ・寒さ）」について、どのような場所を好みますか？',
+        options: [
+          { value: 1, label: '涼しい・寒い地域を好む（避暑地など）' },
+          { value: 2, label: 'やや涼しい場所が良い' },
+          { value: 3, label: '特にこだわらない' },
+          { value: 4, label: '暖かい気候の地域が好き' },
+          { value: 5, label: '南国のように常に暖かい場所を選びたい' }
+        ]
+      },
+      {
+        id: 'culture',
+        title: '文化充実度（Cultural Richness）',
+        subtitle: '歴史的建造物・伝統文化・芸術など、文化的な要素が豊かな地域に魅力を感じますか？',
+        options: [
+          { value: 1, label: '文化や歴史にはあまり興味がない' },
+          { value: 2, label: '少しは見てみたい' },
+          { value: 3, label: '普通程度に興味がある' },
+          { value: 4, label: '積極的に文化体験をしたい' },
+          { value: 5, label: '文化・芸術・伝統が中心の旅行をしたい' }
+        ]
+      },
+      {
+        id: 'accommodation',
+        title: '宿泊充実度（Accommodation Quality）',
+        subtitle: '宿泊施設の数や質（ホテルの快適さ・選択肢の多さ）をどの程度重視しますか？',
+        options: [
+          { value: 1, label: '泊まれれば十分（こだわらない）' },
+          { value: 2, label: '清潔ならそれで良い' },
+          { value: 3, label: 'ある程度快適さを求める' },
+          { value: 4, label: '施設やサービスが充実しているホテルを選びたい' },
+          { value: 5, label: '宿泊そのものを旅行の楽しみとしたい（高級宿・温泉など）' }
+        ]
+      },
+      {
+        id: 'activity',
+        title: 'アクティブ度（Activity Level）',
+        subtitle: 'あなたは旅行中、どの程度アクティブに活動したいですか？',
+        options: [
+          { value: 1, label: 'できるだけのんびり過ごしたい' },
+          { value: 2, label: '軽く観光する程度で良い' },
+          { value: 3, label: '適度に体を動かす体験もしたい' },
+          { value: 4, label: '観光・アクティビティを積極的に楽しみたい' },
+          { value: 5, label: 'スポーツや冒険など、体験重視の旅行をしたい' }
+        ]
+      },
+      {
+        id: 'marine',
+        title: '漁業活動度（Marine / Nature Interest）',
+        subtitle: '海や漁港など、「海のある地域」や「海産物」に魅力を感じますか？',
+        options: [
+          { value: 1, label: '海にはあまり興味がない' },
+          { value: 2, label: '景色として見る程度が好き' },
+          { value: 3, label: '海産物を食べたり、港町を散策したい' },
+          { value: 4, label: '海辺の観光地・島旅を楽しみたい' },
+          { value: 5, label: '海の体験（釣り・ダイビングなど）を積極的にしたい' }
+        ]
+      },
+      {
+        id: 'shopping',
+        title: '小売充実度（Shopping & Convenience）',
+        subtitle: '旅行先の「買い物スポット」や「お土産店の多さ」をどの程度重視しますか？',
+        options: [
+          { value: 1, label: '買い物は特にしない' },
+          { value: 2, label: '地元の特産を少し見る程度で良い' },
+          { value: 3, label: 'ある程度お店があると嬉しい' },
+          { value: 4, label: '観光地のショッピングも楽しみたい' },
+          { value: 5, label: 'ショッピング中心の旅をしたい' }
+        ]
+      },
+      {
+        id: 'popularity',
+        title: '宿泊人気度（Stay Popularity）',
+        subtitle: 'SNSなどで人気の宿泊地・観光地に惹かれますか？',
+        options: [
+          { value: 1, label: '人気は気にせず穴場を探したい' },
+          { value: 2, label: '知る人ぞ知る場所を選びたい' },
+          { value: 3, label: '特にこだわらない' },
+          { value: 4, label: '口コミで評価の高い場所を選びたい' },
+          { value: 5, label: '有名・人気スポットに泊まりたい' }
+        ]
+      },
+      {
+        id: 'daytrip',
+        title: '日帰り観光度（Daytrip Preference）',
+        subtitle: '宿泊よりも「日帰りで気軽に行ける」観光を重視しますか？',
+        options: [
+          { value: 1, label: '長期滞在・宿泊型の旅行を好む' },
+          { value: 2, label: 'どちらかというと宿泊旅行が良い' },
+          { value: 3, label: 'どちらでも構わない' },
+          { value: 4, label: '日帰りで行ける場所を選ぶことが多い' },
+          { value: 5, label: '手軽な日帰り旅行を中心に楽しみたい' }
+        ]
+      }
+    ];
+
+    const prefectures = [
+      { name: '北海道', urbanity: 2, climate: 1, culture: 2, accommodation: 2, activity: 3, marine: 3, shopping: 3, popularity: 2, daytrip: 4 },
+      { name: '青森県', urbanity: 1, climate: 1, culture: 1, accommodation: 1, activity: 4, marine: 1, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '岩手県', urbanity: 1, climate: 1, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '宮城県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 4, marine: 3, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '秋田県', urbanity: 1, climate: 1, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '山形県', urbanity: 1, climate: 1, culture: 1, accommodation: 1, activity: 2, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '福島県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 5, marine: 2, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '茨城県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 5, marine: 1, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '栃木県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 2, marine: 2, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '群馬県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 5, marine: 2, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '埼玉県', urbanity: 2, climate: 3, culture: 2, accommodation: 2, activity: 5, marine: 2, shopping: 4, popularity: 2, daytrip: 4 },
+      { name: '千葉県', urbanity: 2, climate: 3, culture: 2, accommodation: 2, activity: 5, marine: 2, shopping: 3, popularity: 2, daytrip: 4 },
+      { name: '東京都', urbanity: 4, climate: 3, culture: 4, accommodation: 3, activity: 5, marine: 2, shopping: 5, popularity: 3, daytrip: 3 },
+      { name: '神奈川県', urbanity: 3, climate: 3, culture: 2, accommodation: 2, activity: 5, marine: 2, shopping: 4, popularity: 2, daytrip: 3 },
+      { name: '新潟県', urbanity: 1, climate: 2, culture: 2, accommodation: 1, activity: 5, marine: 2, shopping: 2, popularity: 1, daytrip: 1 },
+      { name: '富山県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 1, popularity: 1, daytrip: 2 },
+      { name: '石川県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '福井県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 1, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '山梨県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 2, marine: 2, shopping: 1, popularity: 1, daytrip: 2 },
+      { name: '長野県', urbanity: 1, climate: 1, culture: 2, accommodation: 1, activity: 5, marine: 2, shopping: 2, popularity: 1, daytrip: 1 },
+      { name: '岐阜県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 2, marine: 2, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '静岡県', urbanity: 1, climate: 3, culture: 2, accommodation: 2, activity: 4, marine: 3, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '愛知県', urbanity: 2, climate: 3, culture: 2, accommodation: 2, activity: 5, marine: 2, shopping: 4, popularity: 2, daytrip: 4 },
+      { name: '三重県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 2, marine: 1, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '滋賀県', urbanity: 1, climate: 2, culture: 3, accommodation: 1, activity: 2, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '京都府', urbanity: 1, climate: 3, culture: 3, accommodation: 2, activity: 4, marine: 2, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '大阪府', urbanity: 3, climate: 3, culture: 2, accommodation: 2, activity: 5, marine: 2, shopping: 4, popularity: 2, daytrip: 3 },
+      { name: '兵庫県', urbanity: 2, climate: 3, culture: 2, accommodation: 2, activity: 4, marine: 2, shopping: 3, popularity: 2, daytrip: 4 },
+      { name: '奈良県', urbanity: 1, climate: 2, culture: 3, accommodation: 1, activity: 1, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '和歌山県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 1, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '鳥取県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 1, marine: 1, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '島根県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '岡山県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '広島県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 2, popularity: 1, daytrip: 2 },
+      { name: '山口県', urbanity: 1, climate: 2, culture: 1, accommodation: 1, activity: 4, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '徳島県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 1, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '香川県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 1, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '愛媛県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 1, marine: 3, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '高知県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 1, marine: 1, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '福岡県', urbanity: 2, climate: 3, culture: 2, accommodation: 2, activity: 5, marine: 2, shopping: 3, popularity: 2, daytrip: 4 },
+      { name: '佐賀県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 1, marine: 2, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '長崎県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 4, marine: 3, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '熊本県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 2, marine: 1, shopping: 2, popularity: 1, daytrip: 1 },
+      { name: '大分県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 2, marine: 1, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '宮崎県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 4, marine: 3, shopping: 1, popularity: 1, daytrip: 1 },
+      { name: '鹿児島県', urbanity: 1, climate: 3, culture: 1, accommodation: 1, activity: 2, marine: 4, shopping: 2, popularity: 1, daytrip: 1 },
+      { name: '沖縄県', urbanity: 1, climate: 4, culture: 1, accommodation: 1, activity: 1, marine: 2, shopping: 1, popularity: 1, daytrip: 1 }
+    ];
+
+    const views = {
+      intro: document.getElementById('intro-view'),
+      question: document.getElementById('question-view'),
+      result: document.getElementById('result-view')
+    };
+
+    const questionSubtitleEl = document.getElementById('questionSubtitle');
+    const questionTitleEl = document.getElementById('questionTitle');
+    const questionOptionsEl = document.getElementById('questionOptions');
+    const stepIndicatorEl = document.getElementById('stepIndicator');
+    const progressBarEl = document.getElementById('progressBar');
+    const backButton = document.getElementById('backButton');
+    const nextButton = document.getElementById('nextButton');
+    const startButton = document.getElementById('startButton');
+    const restartButton = document.getElementById('restartButton');
+    const showLegendButton = document.getElementById('showLegendButton');
+    const legend = document.getElementById('legend');
+    const resultTitleEl = document.getElementById('resultTitle');
+    const resultDescriptionEl = document.getElementById('resultDescription');
+    const resultListEl = document.getElementById('resultList');
+
+    let currentQuestionIndex = 0;
+    const responses = {};
+
+    const updateProgressBar = () => {
+      const answeredBefore = questions
+        .slice(0, currentQuestionIndex)
+        .filter((question) => responses[question.id])
+        .length;
+      const currentQuestion = questions[currentQuestionIndex];
+      const currentAnswered = currentQuestion && responses[currentQuestion.id] ? 1 : 0;
+      const progress = ((answeredBefore + currentAnswered) / questions.length) * 100;
+      progressBarEl.style.width = `${progress}%`;
+    };
+
+    const showView = (view) => {
+      Object.values(views).forEach((el) => el.classList.remove('active'));
+      if (view === 'intro') views.intro.classList.add('active');
+      if (view === 'question') views.question.classList.add('active');
+      if (view === 'result') views.result.classList.add('active');
+    };
+
+    const renderQuestion = () => {
+      const question = questions[currentQuestionIndex];
+      questionSubtitleEl.textContent = question.subtitle;
+      questionTitleEl.textContent = question.title;
+      stepIndicatorEl.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+
+      questionOptionsEl.innerHTML = '';
+      question.options.forEach((option) => {
+        const optionId = `${question.id}-${option.value}`;
+        const optionCard = document.createElement('div');
+        optionCard.className = 'option-card';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = question.id;
+        input.id = optionId;
+        input.value = String(option.value);
+
+        if (responses[question.id] === option.value) {
+          input.checked = true;
+          optionCard.classList.add('selected');
+        }
+
+        const label = document.createElement('label');
+        label.setAttribute('for', optionId);
+        label.innerHTML = `<strong>${option.value}</strong><span>${option.label}</span>`;
+
+        input.addEventListener('change', () => {
+          responses[question.id] = option.value;
+          document
+            .querySelectorAll(`.option-card`)
+            .forEach((card) => card.classList.remove('selected'));
+          optionCard.classList.add('selected');
+          nextButton.disabled = false;
+          updateProgressBar();
+        });
+
+        optionCard.appendChild(input);
+        optionCard.appendChild(label);
+        questionOptionsEl.appendChild(optionCard);
+      });
+
+      nextButton.textContent = currentQuestionIndex === questions.length - 1 ? '結果を見る' : '次へ進む';
+      backButton.disabled = currentQuestionIndex === 0;
+
+      if (responses[question.id]) {
+        nextButton.disabled = false;
+        const selectedCard = questionOptionsEl.querySelector(`#${question.id}-${responses[question.id]}`)?.parentElement;
+        if (selectedCard) selectedCard.classList.add('selected');
+      } else {
+        nextButton.disabled = true;
+      }
+
+      updateProgressBar();
+    };
+
+    const calculateMatches = () => {
+      const maxDiff = questions.length * 4; // 1〜5の差分最大値
+
+      return prefectures
+        .map((pref) => {
+          let diff = 0;
+          const breakdown = {};
+          questions.forEach((question) => {
+            const userValue = responses[question.id];
+            const prefValue = pref[question.id];
+            const difference = Math.abs(prefValue - userValue);
+            diff += difference;
+            breakdown[question.id] = { prefValue, userValue, difference };
+          });
+
+          const score = Math.round(Math.max(0, 100 - (diff / maxDiff) * 100));
+
+          return { ...pref, diff, score, breakdown };
+        })
+        .sort((a, b) => b.score - a.score);
+    };
+
+    const renderResults = () => {
+      const matches = calculateMatches();
+      const topMatches = matches.slice(0, 3);
+
+      resultTitleEl.textContent = `${topMatches[0].name} などがおすすめ！`;
+      resultDescriptionEl.textContent = '上位3つの都道府県と、あなたの回答とのマッチング度を以下にまとめました。スコアが高いほど理想に近い旅先です。';
+
+      resultListEl.innerHTML = '';
+      topMatches.forEach((match, index) => {
+        const card = document.createElement('article');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <header>
+            <h3>${index + 1}. ${match.name}</h3>
+            <div class="match-score"><strong>${match.score}点</strong><span>ぴったり度</span></div>
+            <div class="match-bar"><div class="match-bar-inner" style="width: ${match.score}%;"></div></div>
+          </header>
+          <div class="match-detail">
+            ${questions
+              .map((q) => {
+                const { prefValue, userValue, difference } = match.breakdown[q.id];
+                const status = difference === 0 ? '◎ 完全一致' : difference === 1 ? '◯ 近い' : '△ ややズレ';
+                return `<div><strong>${q.title}</strong><br>あなた：${userValue} / ${match.name}：${prefValue}<br>${status}</div>`;
+              })
+              .join('')}
+          </div>
+        `;
+        resultListEl.appendChild(card);
+      });
+    };
+
+    startButton.addEventListener('click', () => {
+      currentQuestionIndex = 0;
+      Object.keys(responses).forEach((key) => delete responses[key]);
+      progressBarEl.style.width = '0%';
+      showView('question');
+      renderQuestion();
+    });
+
+    showLegendButton.addEventListener('click', () => {
+      const isHidden = legend.hasAttribute('hidden');
+      if (isHidden) {
+        legend.removeAttribute('hidden');
+        showLegendButton.textContent = '評価項目を閉じる';
+      } else {
+        legend.setAttribute('hidden', 'hidden');
+        showLegendButton.textContent = '評価項目を見る';
+      }
+    });
+
+    backButton.addEventListener('click', () => {
+      if (currentQuestionIndex === 0) return;
+      currentQuestionIndex -= 1;
+      renderQuestion();
+    });
+
+    nextButton.addEventListener('click', () => {
+      if (!responses[questions[currentQuestionIndex].id]) return;
+      if (currentQuestionIndex === questions.length - 1) {
+        showView('result');
+        renderResults();
+      } else {
+        currentQuestionIndex += 1;
+        renderQuestion();
+      }
+    });
+
+    restartButton.addEventListener('click', () => {
+      showView('intro');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>
